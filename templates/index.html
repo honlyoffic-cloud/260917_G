@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow | 스마트 할일 관리 웹앱</title>
+    <meta name="description" content="Flask 기반의 직관적이고 세련된 스마트 할일 관리 애플리케이션">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-background">
+        <div class="glow-sphere glow-1"></div>
+        <div class="glow-sphere glow-2"></div>
+        <div class="glow-sphere glow-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand-section">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-check-double"></i>
+                </div>
+                <div>
+                    <h1 class="brand-title">TaskFlow <span class="brand-badge">PRO</span></h1>
+                    <p class="brand-subtitle">스마트하고 직관적인 할일 관리 대시보드</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="date-badge" id="currentDateBadge">
+                    <i class="fa-regular fa-calendar-check"></i>
+                    <span id="currentDateText">2026.09.17</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Overview Cards -->
+        <section class="stats-grid" aria-label="할일 통계">
+            <div class="stat-card" id="statCardTotal">
+                <div class="stat-icon-wrapper total-icon">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">전체 할일</span>
+                    <span class="stat-value" id="statTotalCount">0</span>
+                </div>
+            </div>
+            <div class="stat-card" id="statCardPending">
+                <div class="stat-icon-wrapper pending-icon">
+                    <i class="fa-regular fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">진행 중</span>
+                    <span class="stat-value" id="statPendingCount">0</span>
+                </div>
+            </div>
+            <div class="stat-card" id="statCardCompleted">
+                <div class="stat-icon-wrapper completed-icon">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">완료됨</span>
+                    <span class="stat-value" id="statCompletedCount">0</span>
+                </div>
+            </div>
+            <div class="stat-card progress-card" id="statCardProgress">
+                <div class="stat-progress-header">
+                    <span class="stat-label">목표 달성률</span>
+                    <span class="stat-rate-text" id="statRateText">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="statProgressBar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Add Form Card -->
+        <section class="add-task-card glass-panel">
+            <h2 class="section-title">
+                <i class="fa-solid fa-plus-circle"></i> 새 할일 등록
+            </h2>
+            <form id="addTodoForm" class="todo-form">
+                <div class="form-main-row">
+                    <div class="input-with-icon flex-grow">
+                        <i class="fa-solid fa-pencil input-icon"></i>
+                        <input 
+                            type="text" 
+                            id="taskTitleInput" 
+                            class="modern-input" 
+                            placeholder="어떤 일을 완료해야 하나요? (예: 파이썬 과제 제출하기)" 
+                            required
+                            autocomplete="off"
+                        >
+                    </div>
+                    <button type="button" id="toggleDetailsBtn" class="btn-secondary" title="세부 옵션 펼치기/접기">
+                        <i class="fa-solid fa-sliders"></i> 옵션
+                    </button>
+                    <button type="submit" id="addTodoSubmitBtn" class="btn-primary">
+                        <i class="fa-solid fa-plus"></i> 추가하기
+                    </button>
+                </div>
+
+                <!-- Collapsible detail options -->
+                <div class="form-details-row" id="formDetailsRow">
+                    <div class="detail-field">
+                        <label for="taskCategorySelect"><i class="fa-solid fa-tag"></i> 카테고리</label>
+                        <select id="taskCategorySelect" class="modern-select">
+                            <option value="업무">업무</option>
+                            <option value="개인">개인</option>
+                            <option value="공부">공부</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+
+                    <div class="detail-field">
+                        <label for="taskPrioritySelect"><i class="fa-solid fa-flag"></i> 우선순위</label>
+                        <select id="taskPrioritySelect" class="modern-select">
+                            <option value="긴급">🔥 긴급</option>
+                            <option value="높음">⚡ 높음</option>
+                            <option value="보통" selected>🔹 보통</option>
+                            <option value="낮음">☕ 낮음</option>
+                        </select>
+                    </div>
+
+                    <div class="detail-field">
+                        <label for="taskDueDateInput"><i class="fa-regular fa-calendar"></i> 마감일</label>
+                        <input type="date" id="taskDueDateInput" class="modern-input-date">
+                    </div>
+
+                    <div class="detail-field full-width">
+                        <label for="taskDescriptionInput"><i class="fa-regular fa-note-sticky"></i> 상세 메모 (선택)</label>
+                        <input type="text" id="taskDescriptionInput" class="modern-input" placeholder="필요한 세부 메모나 링크를 적어두세요">
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Filter & Search Toolbar -->
+        <section class="toolbar-section">
+            <div class="status-tabs" role="tablist">
+                <button type="button" class="tab-btn active" data-status="all" id="tabAll">
+                    전체 <span class="tab-count" id="countAll">0</span>
+                </button>
+                <button type="button" class="tab-btn" data-status="active" id="tabActive">
+                    진행 중 <span class="tab-count" id="countActive">0</span>
+                </button>
+                <button type="button" class="tab-btn" data-status="completed" id="tabCompleted">
+                    완료됨 <span class="tab-count" id="countCompleted">0</span>
+                </button>
+            </div>
+
+            <div class="toolbar-controls">
+                <!-- Search input -->
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="할일 검색..." autocomplete="off">
+                    <button type="button" id="clearSearchBtn" class="clear-btn" style="display: none;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Category Filter -->
+                <select id="filterCategory" class="toolbar-select" title="카테고리 필터">
+                    <option value="all">모든 카테고리</option>
+                    <option value="업무">업무</option>
+                    <option value="개인">개인</option>
+                    <option value="공부">공부</option>
+                    <option value="기타">기타</option>
+                </select>
+
+                <!-- Priority Filter -->
+                <select id="filterPriority" class="toolbar-select" title="우선순위 필터">
+                    <option value="all">모든 우선순위</option>
+                    <option value="긴급">긴급</option>
+                    <option value="높음">높음</option>
+                    <option value="보통">보통</option>
+                    <option value="낮음">낮음</option>
+                </select>
+
+                <!-- Sort Filter -->
+                <select id="sortOrder" class="toolbar-select" title="정렬 기준">
+                    <option value="created_desc">최신 등록순</option>
+                    <option value="due_date">마감일순</option>
+                    <option value="priority">우선순위순</option>
+                    <option value="created_asc">오래된순</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Todo List Container -->
+        <main class="todo-list-wrapper">
+            <div id="todoList" class="todo-list">
+                <!-- Javascript will render todo items here -->
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="spinner-wrapper" style="display: none;">
+                <div class="spinner"></div>
+                <p>목록을 불러오는 중...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-icon-box">
+                    <i class="fa-regular fa-folder-open"></i>
+                </div>
+                <h3 class="empty-title">등록된 할 일이 없습니다</h3>
+                <p class="empty-desc">새로운 할 일을 추가하고 오늘 하루의 생산성을 높여보세요!</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card glass-panel">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> 할일 수정</h3>
+                <button type="button" class="modal-close-btn" id="closeEditModalBtn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="editTodoForm" class="modal-form">
+                <input type="hidden" id="editTodoId">
+                <div class="form-group">
+                    <label for="editTitleInput">할일 제목</label>
+                    <input type="text" id="editTitleInput" class="modern-input" required>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label for="editCategorySelect">카테고리</label>
+                        <select id="editCategorySelect" class="modern-select">
+                            <option value="업무">업무</option>
+                            <option value="개인">개인</option>
+                            <option value="공부">공부</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPrioritySelect">우선순위</label>
+                        <select id="editPrioritySelect" class="modern-select">
+                            <option value="긴급">🔥 긴급</option>
+                            <option value="높음">⚡ 높음</option>
+                            <option value="보통">🔹 보통</option>
+                            <option value="낮음">☕ 낮음</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editDueDateInput">마감일</label>
+                    <input type="date" id="editDueDateInput" class="modern-input-date">
+                </div>
+                <div class="form-group">
+                    <label for="editDescriptionInput">상세 메모</label>
+                    <textarea id="editDescriptionInput" class="modern-textarea" rows="3" placeholder="메모 내용 입력..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelEditBtn">취소</button>
+                    <button type="submit" class="btn-primary" id="saveEditBtn">
+                        <i class="fa-solid fa-check"></i> 변경사항 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
