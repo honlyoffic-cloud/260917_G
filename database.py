@@ -1,20 +1,23 @@
 import os
-import sqlite3
-from datetime import datetime, date
+from datetime import date
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'todos.db')
+import psycopg2
+import psycopg2.extras
+
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
+
 
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS todos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             description TEXT DEFAULT '',
             category TEXT DEFAULT '일반',
@@ -25,7 +28,7 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+
     # Check if empty, add initial sample tasks if so
     cursor.execute('SELECT COUNT(*) as count FROM todos')
     count = cursor.fetchone()['count']
@@ -39,37 +42,39 @@ def init_db():
         ]
         cursor.executemany('''
             INSERT INTO todos (title, description, category, priority, due_date, completed)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         ''', sample_tasks)
-    
+
     conn.commit()
+    cursor.close()
     conn.close()
+
 
 def get_all_todos(status_filter='all', category='all', priority='all', search='', sort_by='created_desc'):
     conn = get_db()
     cursor = conn.cursor()
-    
+
     query = "SELECT * FROM todos WHERE 1=1"
     params = []
-    
+
     if status_filter == 'active':
         query += " AND completed = 0"
     elif status_filter == 'completed':
         query += " AND completed = 1"
-        
+
     if category and category != 'all':
-        query += " AND category = ?"
+        query += " AND category = %s"
         params.append(category)
-        
+
     if priority and priority != 'all':
-        query += " AND priority = ?"
+        query += " AND priority = %s"
         params.append(priority)
-        
+
     if search:
-        query += " AND (title LIKE ? OR description LIKE ?)"
+        query += " AND (title LIKE %s OR description LIKE %s)"
         wildcard = f"%{search}%"
         params.extend([wildcard, wildcard])
-        
+
     if sort_by == 'due_date':
         query += " ORDER BY CASE WHEN due_date = '' THEN 1 ELSE 0 END, due_date ASC, id DESC"
     elif sort_by == 'priority':
@@ -83,89 +88,102 @@ def get_all_todos(status_filter='all', category='all', priority='all', search=''
         query += " ORDER BY id ASC"
     else: # created_desc
         query += " ORDER BY id DESC"
-        
+
     cursor.execute(query, params)
     rows = cursor.fetchall()
     todos = [dict(row) for row in rows]
+    cursor.close()
     conn.close()
     return todos
+
 
 def get_todo_by_id(todo_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM todos WHERE id = ?", (todo_id,))
+    cursor.execute("SELECT * FROM todos WHERE id = %s", (todo_id,))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return dict(row) if row else None
+
 
 def create_todo(title, description='', category='일반', priority='보통', due_date=''):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
         INSERT INTO todos (title, description, category, priority, due_date, completed)
-        VALUES (?, ?, ?, ?, ?, 0)
+        VALUES (%s, %s, %s, %s, %s, 0)
+        RETURNING id
     ''', (title.strip(), description.strip(), category, priority, due_date))
-    new_id = cursor.lastrowid
+    new_id = cursor.fetchone()['id']
     conn.commit()
+    cursor.close()
     conn.close()
     return get_todo_by_id(new_id)
+
 
 def update_todo(todo_id, **kwargs):
     conn = get_db()
     cursor = conn.cursor()
-    
+
     fields = []
     values = []
     allowed_fields = ['title', 'description', 'category', 'priority', 'due_date', 'completed']
-    
+
     for key, val in kwargs.items():
         if key in allowed_fields and val is not None:
-            fields.append(f"{key} = ?")
+            fields.append(f"{key} = %s")
             values.append(val)
-            
+
     if not fields:
+        cursor.close()
         conn.close()
         return get_todo_by_id(todo_id)
-        
+
     fields.append("updated_at = CURRENT_TIMESTAMP")
     values.append(todo_id)
-    
-    query = f"UPDATE todos SET {', '.join(fields)} WHERE id = ?"
+
+    query = f"UPDATE todos SET {', '.join(fields)} WHERE id = %s"
     cursor.execute(query, values)
     conn.commit()
+    cursor.close()
     conn.close()
     return get_todo_by_id(todo_id)
+
 
 def delete_todo(todo_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+    cursor.execute("DELETE FROM todos WHERE id = %s", (todo_id,))
     deleted = cursor.rowcount > 0
     conn.commit()
+    cursor.close()
     conn.close()
     return deleted
+
 
 def get_stats():
     conn = get_db()
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) as total FROM todos")
     total = cursor.fetchone()['total']
-    
+
     cursor.execute("SELECT COUNT(*) as completed FROM todos WHERE completed = 1")
     completed = cursor.fetchone()['completed']
-    
+
     pending = total - completed
     rate = round((completed / total * 100)) if total > 0 else 0
-    
+
     # categories count
     cursor.execute("SELECT category, COUNT(*) as count FROM todos GROUP BY category")
     categories = {row['category']: row['count'] for row in cursor.fetchall()}
-    
+
     # priorities count
     cursor.execute("SELECT priority, COUNT(*) as count FROM todos GROUP BY priority")
     priorities = {row['priority']: row['count'] for row in cursor.fetchall()}
-    
+
+    cursor.close()
     conn.close()
     return {
         'total': total,
