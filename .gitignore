@@ -4,3 +4,5 @@ todos.db
 
 .vercel
 supabase/.temp/
+
+.env*

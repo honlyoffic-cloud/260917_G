@@ -1,5 +1,15 @@
 import os
 from flask import Flask, render_template, request, jsonify
+
+try:
+    # Loads DATABASE_URL from .env.local for local development
+    # (`vercel env pull .env.local` creates it). No-op if the file
+    # doesn't exist or python-dotenv isn't installed.
+    from dotenv import load_dotenv
+    load_dotenv('.env.local')
+except ImportError:
+    pass
+
 import database
 
 app = Flask(__name__)
@@ -11,91 +21,114 @@ database.init_db()
 def index():
     return render_template('index.html')
 
-@app.route('/api/todos', methods=['GET'])
-def get_todos():
+@app.route('/api/restaurants', methods=['GET'])
+def get_restaurants():
     status = request.args.get('status', 'all')
     category = request.args.get('category', 'all')
-    priority = request.args.get('priority', 'all')
+    rating = request.args.get('rating', 'all')
     search = request.args.get('search', '')
     sort_by = request.args.get('sort_by', 'created_desc')
-    
-    todos = database.get_all_todos(
+
+    restaurants = database.get_all_restaurants(
         status_filter=status,
         category=category,
-        priority=priority,
+        rating_filter=rating,
         search=search,
         sort_by=sort_by
     )
-    return jsonify({'todos': todos})
+    return jsonify({'restaurants': restaurants})
 
-@app.route('/api/todos', methods=['POST'])
-def create_todo():
+@app.route('/api/restaurants', methods=['POST'])
+def create_restaurant():
     data = request.get_json() or {}
-    title = data.get('title', '').strip()
-    
-    if not title:
-        return jsonify({'error': '할 일 제목을 입력해주세요.'}), 400
-        
-    description = data.get('description', '').strip()
-    category = data.get('category', '일반')
-    priority = data.get('priority', '보통')
-    due_date = data.get('due_date', '')
-    
-    todo = database.create_todo(
-        title=title,
-        description=description,
+    name = data.get('name', '').strip()
+
+    if not name:
+        return jsonify({'error': '가게 이름을 입력해주세요.'}), 400
+
+    memo = data.get('memo', '').strip()
+    category = data.get('category', '기타')
+    address = data.get('address', '').strip()
+    price_range = data.get('price_range', '보통')
+    link = data.get('link', '').strip()
+    try:
+        rating = int(data.get('rating', 0) or 0)
+    except (TypeError, ValueError):
+        rating = 0
+    if rating < 0 or rating > 5:
+        return jsonify({'error': '별점은 0~5 사이로 입력해주세요.'}), 400
+    visit_date = data.get('visit_date', '')
+
+    restaurant = database.create_restaurant(
+        name=name,
+        memo=memo,
         category=category,
-        priority=priority,
-        due_date=due_date
+        address=address,
+        price_range=price_range,
+        link=link,
+        rating=rating,
+        visit_date=visit_date
     )
-    return jsonify({'todo': todo, 'message': '할 일이 성공적으로 추가되었습니다.'}), 201
+    return jsonify({'restaurant': restaurant, 'message': '맛집이 추가되었습니다.'}), 201
 
-@app.route('/api/todos/<int:todo_id>', methods=['GET'])
-def get_todo(todo_id):
-    todo = database.get_todo_by_id(todo_id)
-    if not todo:
-        return jsonify({'error': '해당 할 일을 찾을 수 없습니다.'}), 404
-    return jsonify({'todo': todo})
+@app.route('/api/restaurants/<int:restaurant_id>', methods=['GET'])
+def get_restaurant(restaurant_id):
+    restaurant = database.get_restaurant_by_id(restaurant_id)
+    if not restaurant:
+        return jsonify({'error': '해당 맛집을 찾을 수 없습니다.'}), 404
+    return jsonify({'restaurant': restaurant})
 
-@app.route('/api/todos/<int:todo_id>', methods=['PUT'])
-def update_todo(todo_id):
-    existing = database.get_todo_by_id(todo_id)
+@app.route('/api/restaurants/<int:restaurant_id>', methods=['PUT'])
+def update_restaurant(restaurant_id):
+    existing = database.get_restaurant_by_id(restaurant_id)
     if not existing:
-        return jsonify({'error': '해당 할 일을 찾을 수 없습니다.'}), 404
-        
+        return jsonify({'error': '해당 맛집을 찾을 수 없습니다.'}), 404
+
     data = request.get_json() or {}
-    
-    title = data.get('title')
-    if title is not None and not str(title).strip():
-        return jsonify({'error': '할 일 제목은 비워둘 수 없습니다.'}), 400
-        
-    updated = database.update_todo(
-        todo_id,
-        title=str(title).strip() if title is not None else None,
-        description=data.get('description'),
+
+    name = data.get('name')
+    if name is not None and not str(name).strip():
+        return jsonify({'error': '가게 이름은 비워둘 수 없습니다.'}), 400
+
+    rating = data.get('rating')
+    if rating is not None:
+        try:
+            rating = int(rating)
+        except (TypeError, ValueError):
+            return jsonify({'error': '별점은 숫자로 입력해주세요.'}), 400
+        if rating < 0 or rating > 5:
+            return jsonify({'error': '별점은 0~5 사이로 입력해주세요.'}), 400
+
+    updated = database.update_restaurant(
+        restaurant_id,
+        name=str(name).strip() if name is not None else None,
+        memo=data.get('memo'),
         category=data.get('category'),
-        priority=data.get('priority'),
-        due_date=data.get('due_date'),
-        completed=data.get('completed')
+        address=data.get('address'),
+        price_range=data.get('price_range'),
+        link=data.get('link'),
+        rating=rating,
+        visit_date=data.get('visit_date'),
+        visited=data.get('visited')
     )
-    return jsonify({'todo': updated, 'message': '할 일이 수정되었습니다.'})
+    return jsonify({'restaurant': updated, 'message': '맛집 정보가 수정되었습니다.'})
 
-@app.route('/api/todos/<int:todo_id>/toggle', methods=['PATCH'])
-def toggle_todo(todo_id):
-    existing = database.get_todo_by_id(todo_id)
+@app.route('/api/restaurants/<int:restaurant_id>/toggle', methods=['PATCH'])
+def toggle_restaurant(restaurant_id):
+    existing = database.get_restaurant_by_id(restaurant_id)
     if not existing:
-        return jsonify({'error': '해당 할 일을 찾을 수 없습니다.'}), 404
-        
-    new_status = 0 if existing['completed'] else 1
-    updated = database.update_todo(todo_id, completed=new_status)
-    return jsonify({'todo': updated, 'message': '상태가 변경되었습니다.'})
+        return jsonify({'error': '해당 맛집을 찾을 수 없습니다.'}), 404
 
-@app.route('/api/todos/<int:todo_id>', methods=['DELETE'])
-def delete_todo(todo_id):
-    success = database.delete_todo(todo_id)
+    new_status = 0 if existing['visited'] else 1
+    updated = database.update_restaurant(restaurant_id, visited=new_status)
+    return jsonify({'restaurant': updated, 'message': '방문 상태가 변경되었습니다.'})
+
+@app.route('/api/restaurants/<int:restaurant_id>', methods=['DELETE'])
+def delete_restaurant(restaurant_id):
+    success = database.delete_restaurant(restaurant_id)
     if not success:
-        return jsonify({'error': '해당 할 일을 찾을 수 없거나 삭제에 실패했습니다.'}), 404
-    return jsonify({'success': True, 'message': '할 일이 삭제되었습니다.'})
+        return jsonify({'error': '해당 맛집을 찾을 수 없거나 삭제에 실패했습니다.'}), 404
+    return jsonify({'success': True, 'message': '맛집이 삭제되었습니다.'})
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():

@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskFlow | 스마트 할일 관리 웹앱</title>
-    <meta name="description" content="Flask 기반의 직관적이고 세련된 스마트 할일 관리 애플리케이션">
-    
+    <title>맛집노트 | 나만의 맛집 관리 웹앱</title>
+    <meta name="description" content="Flask 기반의 맛집 저장·방문 기록·별점 관리 애플리케이션">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -29,11 +29,11 @@
         <header class="app-header">
             <div class="brand-section">
                 <div class="brand-icon">
-                    <i class="fa-solid fa-check-double"></i>
+                    <i class="fa-solid fa-utensils"></i>
                 </div>
                 <div>
-                    <h1 class="brand-title">TaskFlow <span class="brand-badge">PRO</span></h1>
-                    <p class="brand-subtitle">스마트하고 직관적인 할일 관리 대시보드</p>
+                    <h1 class="brand-title">맛집노트 <span class="brand-badge">PRO</span></h1>
+                    <p class="brand-subtitle">가고 싶은 곳, 다녀온 곳을 한곳에 모아보세요</p>
                 </div>
             </div>
             <div class="header-right">
@@ -45,22 +45,22 @@
         </header>
 
         <!-- Stats Overview Cards -->
-        <section class="stats-grid" aria-label="할일 통계">
+        <section class="stats-grid" aria-label="맛집 통계">
             <div class="stat-card" id="statCardTotal">
                 <div class="stat-icon-wrapper total-icon">
                     <i class="fa-solid fa-list-check"></i>
                 </div>
                 <div class="stat-info">
-                    <span class="stat-label">전체 할일</span>
+                    <span class="stat-label">전체 맛집</span>
                     <span class="stat-value" id="statTotalCount">0</span>
                 </div>
             </div>
             <div class="stat-card" id="statCardPending">
                 <div class="stat-icon-wrapper pending-icon">
-                    <i class="fa-regular fa-clock"></i>
+                    <i class="fa-regular fa-bookmark"></i>
                 </div>
                 <div class="stat-info">
-                    <span class="stat-label">진행 중</span>
+                    <span class="stat-label">방문 예정</span>
                     <span class="stat-value" id="statPendingCount">0</span>
                 </div>
             </div>
@@ -69,13 +69,13 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 <div class="stat-info">
-                    <span class="stat-label">완료됨</span>
+                    <span class="stat-label">방문 완료 <span id="statAvgRating"></span></span>
                     <span class="stat-value" id="statCompletedCount">0</span>
                 </div>
             </div>
             <div class="stat-card progress-card" id="statCardProgress">
                 <div class="stat-progress-header">
-                    <span class="stat-label">목표 달성률</span>
+                    <span class="stat-label">방문률</span>
                     <span class="stat-rate-text" id="statRateText">0%</span>
                 </div>
                 <div class="progress-bar-bg">
@@ -87,17 +87,17 @@
         <!-- Quick Add Form Card -->
         <section class="add-task-card glass-panel">
             <h2 class="section-title">
-                <i class="fa-solid fa-plus-circle"></i> 새 할일 등록
+                <i class="fa-solid fa-plus-circle"></i> 새 맛집 등록
             </h2>
-            <form id="addTodoForm" class="todo-form">
+            <form id="addRestaurantForm" class="todo-form">
                 <div class="form-main-row">
                     <div class="input-with-icon flex-grow">
-                        <i class="fa-solid fa-pencil input-icon"></i>
-                        <input 
-                            type="text" 
-                            id="taskTitleInput" 
-                            class="modern-input" 
-                            placeholder="어떤 일을 완료해야 하나요? (예: 파이썬 과제 제출하기)" 
+                        <i class="fa-solid fa-store input-icon"></i>
+                        <input
+                            type="text"
+                            id="nameInput"
+                            class="modern-input"
+                            placeholder="가게 이름을 입력하세요 (예: 을지로 골뱅이)"
                             required
                             autocomplete="off"
                         >
@@ -105,7 +105,7 @@
                     <button type="button" id="toggleDetailsBtn" class="btn-secondary" title="세부 옵션 펼치기/접기">
                         <i class="fa-solid fa-sliders"></i> 옵션
                     </button>
-                    <button type="submit" id="addTodoSubmitBtn" class="btn-primary">
+                    <button type="submit" id="addSubmitBtn" class="btn-primary">
                         <i class="fa-solid fa-plus"></i> 추가하기
                     </button>
                 </div>
@@ -113,33 +113,41 @@
                 <!-- Collapsible detail options -->
                 <div class="form-details-row" id="formDetailsRow">
                     <div class="detail-field">
-                        <label for="taskCategorySelect"><i class="fa-solid fa-tag"></i> 카테고리</label>
-                        <select id="taskCategorySelect" class="modern-select">
-                            <option value="업무">업무</option>
-                            <option value="개인">개인</option>
-                            <option value="공부">공부</option>
+                        <label for="categorySelect"><i class="fa-solid fa-tag"></i> 카테고리</label>
+                        <select id="categorySelect" class="modern-select">
+                            <option value="한식">한식</option>
+                            <option value="중식">중식</option>
+                            <option value="일식">일식</option>
+                            <option value="양식">양식</option>
+                            <option value="카페">카페</option>
+                            <option value="디저트">디저트</option>
+                            <option value="술집">술집</option>
                             <option value="기타">기타</option>
                         </select>
                     </div>
 
                     <div class="detail-field">
-                        <label for="taskPrioritySelect"><i class="fa-solid fa-flag"></i> 우선순위</label>
-                        <select id="taskPrioritySelect" class="modern-select">
-                            <option value="긴급">🔥 긴급</option>
-                            <option value="높음">⚡ 높음</option>
-                            <option value="보통" selected>🔹 보통</option>
-                            <option value="낮음">☕ 낮음</option>
+                        <label for="priceSelect"><i class="fa-solid fa-won-sign"></i> 가격대</label>
+                        <select id="priceSelect" class="modern-select">
+                            <option value="저렴">💰 저렴</option>
+                            <option value="보통" selected>💰💰 보통</option>
+                            <option value="비쌈">💰💰💰 비쌈</option>
                         </select>
                     </div>
 
                     <div class="detail-field">
-                        <label for="taskDueDateInput"><i class="fa-regular fa-calendar"></i> 마감일</label>
-                        <input type="date" id="taskDueDateInput" class="modern-input-date">
+                        <label for="addressInput"><i class="fa-solid fa-location-dot"></i> 위치/주소</label>
+                        <input type="text" id="addressInput" class="modern-input" placeholder="예: 서울 마포구 연남동">
+                    </div>
+
+                    <div class="detail-field">
+                        <label for="linkInput"><i class="fa-solid fa-link"></i> 참고 링크</label>
+                        <input type="text" id="linkInput" class="modern-input" placeholder="네이버지도, 인스타 등 URL">
                     </div>
 
                     <div class="detail-field full-width">
-                        <label for="taskDescriptionInput"><i class="fa-regular fa-note-sticky"></i> 상세 메모 (선택)</label>
-                        <input type="text" id="taskDescriptionInput" class="modern-input" placeholder="필요한 세부 메모나 링크를 적어두세요">
+                        <label for="memoInput"><i class="fa-regular fa-note-sticky"></i> 메모 (선택)</label>
+                        <input type="text" id="memoInput" class="modern-input" placeholder="추천 메뉴, 후기 등을 적어두세요">
                     </div>
                 </div>
             </form>
@@ -151,11 +159,11 @@
                 <button type="button" class="tab-btn active" data-status="all" id="tabAll">
                     전체 <span class="tab-count" id="countAll">0</span>
                 </button>
-                <button type="button" class="tab-btn" data-status="active" id="tabActive">
-                    진행 중 <span class="tab-count" id="countActive">0</span>
+                <button type="button" class="tab-btn" data-status="planned" id="tabActive">
+                    방문 예정 <span class="tab-count" id="countActive">0</span>
                 </button>
-                <button type="button" class="tab-btn" data-status="completed" id="tabCompleted">
-                    완료됨 <span class="tab-count" id="countCompleted">0</span>
+                <button type="button" class="tab-btn" data-status="visited" id="tabCompleted">
+                    방문 완료 <span class="tab-count" id="countCompleted">0</span>
                 </button>
             </div>
 
@@ -163,7 +171,7 @@
                 <!-- Search input -->
                 <div class="search-box">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="searchInput" placeholder="할일 검색..." autocomplete="off">
+                    <input type="text" id="searchInput" placeholder="가게명, 주소, 메모 검색..." autocomplete="off">
                     <button type="button" id="clearSearchBtn" class="clear-btn" style="display: none;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -172,35 +180,40 @@
                 <!-- Category Filter -->
                 <select id="filterCategory" class="toolbar-select" title="카테고리 필터">
                     <option value="all">모든 카테고리</option>
-                    <option value="업무">업무</option>
-                    <option value="개인">개인</option>
-                    <option value="공부">공부</option>
+                    <option value="한식">한식</option>
+                    <option value="중식">중식</option>
+                    <option value="일식">일식</option>
+                    <option value="양식">양식</option>
+                    <option value="카페">카페</option>
+                    <option value="디저트">디저트</option>
+                    <option value="술집">술집</option>
                     <option value="기타">기타</option>
                 </select>
 
-                <!-- Priority Filter -->
-                <select id="filterPriority" class="toolbar-select" title="우선순위 필터">
-                    <option value="all">모든 우선순위</option>
-                    <option value="긴급">긴급</option>
-                    <option value="높음">높음</option>
-                    <option value="보통">보통</option>
-                    <option value="낮음">낮음</option>
+                <!-- Rating Filter -->
+                <select id="filterPriority" class="toolbar-select" title="별점 필터">
+                    <option value="all">모든 별점</option>
+                    <option value="5">★5</option>
+                    <option value="4">★4</option>
+                    <option value="3">★3</option>
+                    <option value="2">★2</option>
+                    <option value="1">★1</option>
                 </select>
 
                 <!-- Sort Filter -->
                 <select id="sortOrder" class="toolbar-select" title="정렬 기준">
                     <option value="created_desc">최신 등록순</option>
-                    <option value="due_date">마감일순</option>
-                    <option value="priority">우선순위순</option>
+                    <option value="rating_desc">별점 높은순</option>
+                    <option value="name">가게 이름순</option>
                     <option value="created_asc">오래된순</option>
                 </select>
             </div>
         </section>
 
-        <!-- Todo List Container -->
+        <!-- Restaurant List Container -->
         <main class="todo-list-wrapper">
             <div id="todoList" class="todo-list">
-                <!-- Javascript will render todo items here -->
+                <!-- Javascript will render restaurant cards here -->
             </div>
 
             <!-- Loading Spinner -->
@@ -212,10 +225,10 @@
             <!-- Empty State -->
             <div id="emptyState" class="empty-state" style="display: none;">
                 <div class="empty-icon-box">
-                    <i class="fa-regular fa-folder-open"></i>
+                    <i class="fa-solid fa-utensils"></i>
                 </div>
-                <h3 class="empty-title">등록된 할 일이 없습니다</h3>
-                <p class="empty-desc">새로운 할 일을 추가하고 오늘 하루의 생산성을 높여보세요!</p>
+                <h3 class="empty-title">등록된 맛집이 없습니다</h3>
+                <p class="empty-desc">가보고 싶은 맛집이나 다녀온 맛집을 등록해보세요!</p>
             </div>
         </main>
     </div>
@@ -224,44 +237,62 @@
     <div id="editModal" class="modal-overlay" style="display: none;">
         <div class="modal-card glass-panel">
             <div class="modal-header">
-                <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> 할일 수정</h3>
+                <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> 맛집 정보 수정</h3>
                 <button type="button" class="modal-close-btn" id="closeEditModalBtn">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <form id="editTodoForm" class="modal-form">
-                <input type="hidden" id="editTodoId">
+            <form id="editRestaurantForm" class="modal-form">
+                <input type="hidden" id="editId">
                 <div class="form-group">
-                    <label for="editTitleInput">할일 제목</label>
-                    <input type="text" id="editTitleInput" class="modern-input" required>
+                    <label for="editNameInput">가게 이름</label>
+                    <input type="text" id="editNameInput" class="modern-input" required>
                 </div>
                 <div class="form-group-row">
                     <div class="form-group">
                         <label for="editCategorySelect">카테고리</label>
                         <select id="editCategorySelect" class="modern-select">
-                            <option value="업무">업무</option>
-                            <option value="개인">개인</option>
-                            <option value="공부">공부</option>
+                            <option value="한식">한식</option>
+                            <option value="중식">중식</option>
+                            <option value="일식">일식</option>
+                            <option value="양식">양식</option>
+                            <option value="카페">카페</option>
+                            <option value="디저트">디저트</option>
+                            <option value="술집">술집</option>
                             <option value="기타">기타</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="editPrioritySelect">우선순위</label>
-                        <select id="editPrioritySelect" class="modern-select">
-                            <option value="긴급">🔥 긴급</option>
-                            <option value="높음">⚡ 높음</option>
-                            <option value="보통">🔹 보통</option>
-                            <option value="낮음">☕ 낮음</option>
+                        <label for="editPriceSelect">가격대</label>
+                        <select id="editPriceSelect" class="modern-select">
+                            <option value="저렴">💰 저렴</option>
+                            <option value="보통">💰💰 보통</option>
+                            <option value="비쌈">💰💰💰 비쌈</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="editDueDateInput">마감일</label>
-                    <input type="date" id="editDueDateInput" class="modern-input-date">
+                    <label for="editAddressInput">위치/주소</label>
+                    <input type="text" id="editAddressInput" class="modern-input">
                 </div>
                 <div class="form-group">
-                    <label for="editDescriptionInput">상세 메모</label>
-                    <textarea id="editDescriptionInput" class="modern-textarea" rows="3" placeholder="메모 내용 입력..."></textarea>
+                    <label for="editLinkInput">참고 링크</label>
+                    <input type="text" id="editLinkInput" class="modern-input">
+                </div>
+                <div class="form-group">
+                    <label for="editRatingSelect">별점</label>
+                    <select id="editRatingSelect" class="modern-select">
+                        <option value="0">평가 안 함</option>
+                        <option value="1">★☆☆☆☆ (1)</option>
+                        <option value="2">★★☆☆☆ (2)</option>
+                        <option value="3">★★★☆☆ (3)</option>
+                        <option value="4">★★★★☆ (4)</option>
+                        <option value="5">★★★★★ (5)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editMemoInput">메모</label>
+                    <textarea id="editMemoInput" class="modern-textarea" rows="3" placeholder="추천 메뉴, 후기 등..."></textarea>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary" id="cancelEditBtn">취소</button>

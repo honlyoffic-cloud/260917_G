@@ -16,119 +16,119 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS todos (
+        CREATE TABLE IF NOT EXISTS restaurants (
             id SERIAL PRIMARY KEY,
-            title TEXT NOT NULL,
-            description TEXT DEFAULT '',
-            category TEXT DEFAULT '일반',
-            priority TEXT DEFAULT '보통',
-            due_date TEXT DEFAULT '',
-            completed INTEGER DEFAULT 0,
+            name TEXT NOT NULL,
+            memo TEXT DEFAULT '',
+            category TEXT DEFAULT '기타',
+            address TEXT DEFAULT '',
+            price_range TEXT DEFAULT '보통',
+            link TEXT DEFAULT '',
+            rating INTEGER DEFAULT 0,
+            visited INTEGER DEFAULT 0,
+            visit_date TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
-    # Check if empty, add initial sample tasks if so
-    cursor.execute('SELECT COUNT(*) as count FROM todos')
+    # Check if empty, add initial sample restaurants if so
+    cursor.execute('SELECT COUNT(*) as count FROM restaurants')
     count = cursor.fetchone()['count']
     if count == 0:
         today_str = date.today().strftime('%Y-%m-%d')
-        sample_tasks = [
-            ("Flask 할일 관리 웹앱 개발하기", "Python Flask와 SQLite를 활용하여 풀스택 할일 관리 앱 구축", "업무", "긴급", today_str, 1),
-            ("디자인 시스템 및 반응형 UI 점검", "글래스모피즘 및 모바일 반응형 스타일링 확인", "업무", "높음", today_str, 0),
-            ("동작 검증 및 브라우저 테스트 완료하기", "할일 추가, 수정, 완료 토글 및 삭제 기능 검증", "공부", "보통", today_str, 0),
-            ("운동 30분 및 스트레칭하기", "가벼운 조깅 또는 홈 트레이닝", "개인", "낮음", today_str, 0)
+        sample_restaurants = [
+            ("을지로 골뱅이", "매콤한 골뱅이무침에 소맥이 진리. 평일 저녁엔 웨이팅 있음", "한식", "서울 중구 을지로", "저렴", "", 5, 1, today_str),
+            ("스시오마카세 하나", "오마카세치고 가성비 좋음. 참치 뱃살 최고", "일식", "서울 강남구 역삼동", "비쌈", "", 4, 1, today_str),
+            ("나폴리 화덕피자", "화덕 마르게리타 인생 피자. 다음 달 생일 모임 예정", "양식", "서울 마포구 연남동", "보통", "", 0, 0, ""),
+            ("동네 커피로스터리", "원두 직접 로스팅. 사장님이 친절함", "카페", "서울 서대문구 연희동", "저렴", "", 0, 0, ""),
         ]
         cursor.executemany('''
-            INSERT INTO todos (title, description, category, priority, due_date, completed)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', sample_tasks)
+            INSERT INTO restaurants (name, memo, category, address, price_range, link, rating, visited, visit_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', sample_restaurants)
 
     conn.commit()
     cursor.close()
     conn.close()
 
 
-def get_all_todos(status_filter='all', category='all', priority='all', search='', sort_by='created_desc'):
+def get_all_restaurants(status_filter='all', category='all', rating_filter='all', search='', sort_by='created_desc'):
     conn = get_db()
     cursor = conn.cursor()
 
-    query = "SELECT * FROM todos WHERE 1=1"
+    query = "SELECT * FROM restaurants WHERE 1=1"
     params = []
 
-    if status_filter == 'active':
-        query += " AND completed = 0"
-    elif status_filter == 'completed':
-        query += " AND completed = 1"
+    if status_filter == 'visited':
+        query += " AND visited = 1"
+    elif status_filter == 'planned':
+        query += " AND visited = 0"
 
     if category and category != 'all':
         query += " AND category = %s"
         params.append(category)
 
-    if priority and priority != 'all':
-        query += " AND priority = %s"
-        params.append(priority)
+    if rating_filter and rating_filter != 'all':
+        query += " AND rating = %s"
+        params.append(int(rating_filter))
 
     if search:
-        query += " AND (title LIKE %s OR description LIKE %s)"
+        query += " AND (name LIKE %s OR memo LIKE %s OR address LIKE %s)"
         wildcard = f"%{search}%"
-        params.extend([wildcard, wildcard])
+        params.extend([wildcard, wildcard, wildcard])
 
-    if sort_by == 'due_date':
-        query += " ORDER BY CASE WHEN due_date = '' THEN 1 ELSE 0 END, due_date ASC, id DESC"
-    elif sort_by == 'priority':
-        query += """ ORDER BY CASE priority
-            WHEN '긴급' THEN 1
-            WHEN '높음' THEN 2
-            WHEN '보통' THEN 3
-            WHEN '낮음' THEN 4
-            ELSE 5 END, id DESC"""
+    if sort_by == 'rating_desc':
+        query += " ORDER BY rating DESC, id DESC"
+    elif sort_by == 'name':
+        query += " ORDER BY name ASC"
     elif sort_by == 'created_asc':
         query += " ORDER BY id ASC"
-    else: # created_desc
+    else:  # created_desc
         query += " ORDER BY id DESC"
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
-    todos = [dict(row) for row in rows]
+    restaurants = [dict(row) for row in rows]
     cursor.close()
     conn.close()
-    return todos
+    return restaurants
 
 
-def get_todo_by_id(todo_id):
+def get_restaurant_by_id(restaurant_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM todos WHERE id = %s", (todo_id,))
+    cursor.execute("SELECT * FROM restaurants WHERE id = %s", (restaurant_id,))
     row = cursor.fetchone()
     cursor.close()
     conn.close()
     return dict(row) if row else None
 
 
-def create_todo(title, description='', category='일반', priority='보통', due_date=''):
+def create_restaurant(name, memo='', category='기타', address='', price_range='보통',
+                       link='', rating=0, visit_date=''):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO todos (title, description, category, priority, due_date, completed)
-        VALUES (%s, %s, %s, %s, %s, 0)
+        INSERT INTO restaurants (name, memo, category, address, price_range, link, rating, visited, visit_date)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s)
         RETURNING id
-    ''', (title.strip(), description.strip(), category, priority, due_date))
+    ''', (name.strip(), memo.strip(), category, address.strip(), price_range, link.strip(), rating, visit_date))
     new_id = cursor.fetchone()['id']
     conn.commit()
     cursor.close()
     conn.close()
-    return get_todo_by_id(new_id)
+    return get_restaurant_by_id(new_id)
 
 
-def update_todo(todo_id, **kwargs):
+def update_restaurant(restaurant_id, **kwargs):
     conn = get_db()
     cursor = conn.cursor()
 
     fields = []
     values = []
-    allowed_fields = ['title', 'description', 'category', 'priority', 'due_date', 'completed']
+    allowed_fields = ['name', 'memo', 'category', 'address', 'price_range',
+                       'link', 'rating', 'visited', 'visit_date']
 
     for key, val in kwargs.items():
         if key in allowed_fields and val is not None:
@@ -138,23 +138,23 @@ def update_todo(todo_id, **kwargs):
     if not fields:
         cursor.close()
         conn.close()
-        return get_todo_by_id(todo_id)
+        return get_restaurant_by_id(restaurant_id)
 
     fields.append("updated_at = CURRENT_TIMESTAMP")
-    values.append(todo_id)
+    values.append(restaurant_id)
 
-    query = f"UPDATE todos SET {', '.join(fields)} WHERE id = %s"
+    query = f"UPDATE restaurants SET {', '.join(fields)} WHERE id = %s"
     cursor.execute(query, values)
     conn.commit()
     cursor.close()
     conn.close()
-    return get_todo_by_id(todo_id)
+    return get_restaurant_by_id(restaurant_id)
 
 
-def delete_todo(todo_id):
+def delete_restaurant(restaurant_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM todos WHERE id = %s", (todo_id,))
+    cursor.execute("DELETE FROM restaurants WHERE id = %s", (restaurant_id,))
     deleted = cursor.rowcount > 0
     conn.commit()
     cursor.close()
@@ -166,30 +166,29 @@ def get_stats():
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) as total FROM todos")
+    cursor.execute("SELECT COUNT(*) as total FROM restaurants")
     total = cursor.fetchone()['total']
 
-    cursor.execute("SELECT COUNT(*) as completed FROM todos WHERE completed = 1")
-    completed = cursor.fetchone()['completed']
+    cursor.execute("SELECT COUNT(*) as visited FROM restaurants WHERE visited = 1")
+    visited = cursor.fetchone()['visited']
 
-    pending = total - completed
-    rate = round((completed / total * 100)) if total > 0 else 0
+    planned = total - visited
+    rate = round((visited / total * 100)) if total > 0 else 0
 
-    # categories count
-    cursor.execute("SELECT category, COUNT(*) as count FROM todos GROUP BY category")
+    cursor.execute("SELECT category, COUNT(*) as count FROM restaurants GROUP BY category")
     categories = {row['category']: row['count'] for row in cursor.fetchall()}
 
-    # priorities count
-    cursor.execute("SELECT priority, COUNT(*) as count FROM todos GROUP BY priority")
-    priorities = {row['priority']: row['count'] for row in cursor.fetchall()}
+    cursor.execute("SELECT COALESCE(ROUND(AVG(rating)::numeric, 1), 0) as avg_rating "
+                    "FROM restaurants WHERE visited = 1 AND rating > 0")
+    avg_rating = float(cursor.fetchone()['avg_rating'])
 
     cursor.close()
     conn.close()
     return {
         'total': total,
-        'completed': completed,
-        'pending': pending,
+        'visited': visited,
+        'planned': planned,
         'rate': rate,
         'categories': categories,
-        'priorities': priorities
+        'avg_rating': avg_rating,
     }

@@ -53,6 +53,36 @@
     --cat-other-bg: rgba(168, 85, 247, 0.15);
     --cat-other-text: #c084fc;
 
+    /* Restaurant Category Badges */
+    --cat-korean-bg: rgba(239, 68, 68, 0.15);
+    --cat-korean-text: #f87171;
+    --cat-chinese-bg: rgba(249, 115, 22, 0.15);
+    --cat-chinese-text: #fb923c;
+    --cat-japanese-bg: rgba(14, 165, 233, 0.15);
+    --cat-japanese-text: #38bdf8;
+    --cat-western-bg: rgba(168, 85, 247, 0.15);
+    --cat-western-text: #c084fc;
+    --cat-cafe-bg: rgba(180, 130, 90, 0.18);
+    --cat-cafe-text: #d8a26b;
+    --cat-dessert-bg: rgba(236, 72, 153, 0.15);
+    --cat-dessert-text: #f472b6;
+    --cat-pub-bg: rgba(220, 38, 38, 0.18);
+    --cat-pub-text: #fca5a5;
+
+    /* Price Range Badges */
+    --price-cheap-bg: rgba(16, 185, 129, 0.15);
+    --price-cheap-text: #34d399;
+    --price-cheap-border: rgba(16, 185, 129, 0.3);
+    --price-normal-bg: rgba(14, 165, 233, 0.15);
+    --price-normal-text: #38bdf8;
+    --price-normal-border: rgba(14, 165, 233, 0.3);
+    --price-expensive-bg: rgba(245, 158, 11, 0.15);
+    --price-expensive-text: #fbbf24;
+    --price-expensive-border: rgba(245, 158, 11, 0.3);
+
+    --star-color: #fbbf24;
+    --star-empty: rgba(255, 255, 255, 0.15);
+
     /* Layout & Shadows */
     --radius-sm: 8px;
     --radius-md: 12px;
@@ -789,6 +819,83 @@ body {
 .badge-category-기타 {
     background: var(--cat-other-bg);
     color: var(--cat-other-text);
+}
+
+/* Restaurant Category Badges */
+.badge-category-한식 {
+    background: var(--cat-korean-bg);
+    color: var(--cat-korean-text);
+}
+.badge-category-중식 {
+    background: var(--cat-chinese-bg);
+    color: var(--cat-chinese-text);
+}
+.badge-category-일식 {
+    background: var(--cat-japanese-bg);
+    color: var(--cat-japanese-text);
+}
+.badge-category-양식 {
+    background: var(--cat-western-bg);
+    color: var(--cat-western-text);
+}
+.badge-category-카페 {
+    background: var(--cat-cafe-bg);
+    color: var(--cat-cafe-text);
+}
+.badge-category-디저트 {
+    background: var(--cat-dessert-bg);
+    color: var(--cat-dessert-text);
+}
+.badge-category-술집 {
+    background: var(--cat-pub-bg);
+    color: var(--cat-pub-text);
+}
+
+/* Price Range Badges */
+.badge-price-저렴 {
+    background: var(--price-cheap-bg);
+    color: var(--price-cheap-text);
+    border: 1px solid var(--price-cheap-border);
+}
+.badge-price-보통 {
+    background: var(--price-normal-bg);
+    color: var(--price-normal-text);
+    border: 1px solid var(--price-normal-border);
+}
+.badge-price-비쌈 {
+    background: var(--price-expensive-bg);
+    color: var(--price-expensive-text);
+    border: 1px solid var(--price-expensive-border);
+}
+
+/* Star Rating */
+.rating-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.85rem;
+}
+.rating-stars i {
+    color: var(--star-empty);
+}
+.rating-stars i.filled {
+    color: var(--star-color);
+}
+.rating-stars.rating-empty {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-style: normal;
+}
+
+/* Visited Badge */
+.badge-visited {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.badge-planned {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
 }
 
 /* Due Date Badge */

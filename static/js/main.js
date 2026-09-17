@@ -1,5 +1,5 @@
 /**
- * TaskFlow - 스마트 할일 관리 애플리케이션 프론트엔드 스크립트
+ * 맛집노트 - 맛집 관리 애플리케이션 프론트엔드 스크립트
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         status: 'all',
         category: 'all',
-        priority: 'all',
+        rating: 'all',
         search: '',
         sortBy: 'created_desc',
-        todos: []
+        restaurants: []
     };
 
     // DOM Elements
@@ -19,21 +19,23 @@ document.addEventListener('DOMContentLoaded', () => {
         statTotalCount: document.getElementById('statTotalCount'),
         statPendingCount: document.getElementById('statPendingCount'),
         statCompletedCount: document.getElementById('statCompletedCount'),
+        statAvgRating: document.getElementById('statAvgRating'),
         statRateText: document.getElementById('statRateText'),
         statProgressBar: document.getElementById('statProgressBar'),
-        
+
         countAll: document.getElementById('countAll'),
         countActive: document.getElementById('countActive'),
         countCompleted: document.getElementById('countCompleted'),
 
-        addTodoForm: document.getElementById('addTodoForm'),
-        taskTitleInput: document.getElementById('taskTitleInput'),
+        addRestaurantForm: document.getElementById('addRestaurantForm'),
+        nameInput: document.getElementById('nameInput'),
         toggleDetailsBtn: document.getElementById('toggleDetailsBtn'),
         formDetailsRow: document.getElementById('formDetailsRow'),
-        taskCategorySelect: document.getElementById('taskCategorySelect'),
-        taskPrioritySelect: document.getElementById('taskPrioritySelect'),
-        taskDueDateInput: document.getElementById('taskDueDateInput'),
-        taskDescriptionInput: document.getElementById('taskDescriptionInput'),
+        categorySelect: document.getElementById('categorySelect'),
+        priceSelect: document.getElementById('priceSelect'),
+        addressInput: document.getElementById('addressInput'),
+        linkInput: document.getElementById('linkInput'),
+        memoInput: document.getElementById('memoInput'),
 
         tabButtons: document.querySelectorAll('.tab-btn'),
         searchInput: document.getElementById('searchInput'),
@@ -48,15 +50,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Edit Modal
         editModal: document.getElementById('editModal'),
-        editTodoForm: document.getElementById('editTodoForm'),
+        editRestaurantForm: document.getElementById('editRestaurantForm'),
         closeEditModalBtn: document.getElementById('closeEditModalBtn'),
         cancelEditBtn: document.getElementById('cancelEditBtn'),
-        editTodoId: document.getElementById('editTodoId'),
-        editTitleInput: document.getElementById('editTitleInput'),
+        editId: document.getElementById('editId'),
+        editNameInput: document.getElementById('editNameInput'),
         editCategorySelect: document.getElementById('editCategorySelect'),
-        editPrioritySelect: document.getElementById('editPrioritySelect'),
-        editDueDateInput: document.getElementById('editDueDateInput'),
-        editDescriptionInput: document.getElementById('editDescriptionInput'),
+        editPriceSelect: document.getElementById('editPriceSelect'),
+        editAddressInput: document.getElementById('editAddressInput'),
+        editLinkInput: document.getElementById('editLinkInput'),
+        editRatingSelect: document.getElementById('editRatingSelect'),
+        editMemoInput: document.getElementById('editMemoInput'),
 
         toastContainer: document.getElementById('toastContainer')
     };
@@ -64,12 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Current Date Badge
     initDateDisplay();
 
-    // Set Default Due Date to today for quick reference
-    const todayStr = new Date().toISOString().split('T')[0];
-    elements.taskDueDateInput.value = todayStr;
-
-    // Load Todos & Stats
-    fetchTodos();
+    // Load Restaurants & Stats
+    fetchRestaurants();
     fetchStats();
 
     // Event Listeners
@@ -97,8 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.toggleDetailsBtn.classList.toggle('active', !isVisible);
         });
 
-        // Add Todo Form Submit
-        elements.addTodoForm.addEventListener('submit', handleAddTodo);
+        // Add Restaurant Form Submit
+        elements.addRestaurantForm.addEventListener('submit', handleAddRestaurant);
 
         // Status Tabs Click
         elements.tabButtons.forEach(btn => {
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.tabButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 state.status = btn.dataset.status;
-                fetchTodos();
+                fetchRestaurants();
             });
         });
 
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 state.search = val;
-                fetchTodos();
+                fetchRestaurants();
             }, 300);
         });
 
@@ -126,24 +126,24 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.searchInput.value = '';
             elements.clearSearchBtn.style.display = 'none';
             state.search = '';
-            fetchTodos();
+            fetchRestaurants();
         });
 
-        // Category & Priority Filters
+        // Category & Rating Filters
         elements.filterCategory.addEventListener('change', (e) => {
             state.category = e.target.value;
-            fetchTodos();
+            fetchRestaurants();
         });
 
         elements.filterPriority.addEventListener('change', (e) => {
-            state.priority = e.target.value;
-            fetchTodos();
+            state.rating = e.target.value;
+            fetchRestaurants();
         });
 
         // Sort Order
         elements.sortOrder.addEventListener('change', (e) => {
             state.sortBy = e.target.value;
-            fetchTodos();
+            fetchRestaurants();
         });
 
         // Modal Controls
@@ -157,33 +157,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeEditModal();
             }
         });
-        elements.editTodoForm.addEventListener('submit', handleUpdateTodo);
+        elements.editRestaurantForm.addEventListener('submit', handleUpdateRestaurant);
     }
 
     /* ==========================================================================
        API Calls & Data Fetching
        ========================================================================== */
 
-    async function fetchTodos() {
+    async function fetchRestaurants() {
         showLoading(true);
         try {
             const params = new URLSearchParams({
                 status: state.status,
                 category: state.category,
-                priority: state.priority,
+                rating: state.rating,
                 search: state.search,
                 sort_by: state.sortBy
             });
 
-            const res = await fetch(`/api/todos?${params.toString()}`);
+            const res = await fetch(`/api/restaurants?${params.toString()}`);
             if (!res.ok) throw new Error('목록 조회 실패');
-            
+
             const data = await res.json();
-            state.todos = data.todos || [];
-            renderTodoList(state.todos);
+            state.restaurants = data.restaurants || [];
+            renderRestaurantList(state.restaurants);
         } catch (err) {
             console.error(err);
-            showToast('할일 목록을 불러오는 중 오류가 발생했습니다.', 'error');
+            showToast('맛집 목록을 불러오는 중 오류가 발생했습니다.', 'error');
         } finally {
             showLoading(false);
         }
@@ -196,37 +196,39 @@ document.addEventListener('DOMContentLoaded', () => {
             const stats = await res.json();
 
             elements.statTotalCount.textContent = stats.total;
-            elements.statPendingCount.textContent = stats.pending;
-            elements.statCompletedCount.textContent = stats.completed;
+            elements.statPendingCount.textContent = stats.planned;
+            elements.statCompletedCount.textContent = stats.visited;
             elements.statRateText.textContent = `${stats.rate}%`;
             elements.statProgressBar.style.width = `${stats.rate}%`;
+            elements.statAvgRating.textContent = stats.avg_rating > 0 ? `(평균 ★${stats.avg_rating})` : '';
 
             elements.countAll.textContent = stats.total;
-            elements.countActive.textContent = stats.pending;
-            elements.countCompleted.textContent = stats.completed;
+            elements.countActive.textContent = stats.planned;
+            elements.countCompleted.textContent = stats.visited;
         } catch (err) {
             console.error('Stats fetch error:', err);
         }
     }
 
-    async function handleAddTodo(e) {
+    async function handleAddRestaurant(e) {
         e.preventDefault();
-        const title = elements.taskTitleInput.value.trim();
-        if (!title) {
-            showToast('할일 제목을 입력해주세요.', 'error');
+        const name = elements.nameInput.value.trim();
+        if (!name) {
+            showToast('가게 이름을 입력해주세요.', 'error');
             return;
         }
 
         const payload = {
-            title: title,
-            description: elements.taskDescriptionInput.value.trim(),
-            category: elements.taskCategorySelect.value,
-            priority: elements.taskPrioritySelect.value,
-            due_date: elements.taskDueDateInput.value
+            name: name,
+            memo: elements.memoInput.value.trim(),
+            category: elements.categorySelect.value,
+            price_range: elements.priceSelect.value,
+            address: elements.addressInput.value.trim(),
+            link: elements.linkInput.value.trim()
         };
 
         try {
-            const res = await fetch('/api/todos', {
+            const res = await fetch('/api/restaurants', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -238,73 +240,77 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Reset Input Fields
-            elements.taskTitleInput.value = '';
-            elements.taskDescriptionInput.value = '';
-            elements.taskTitleInput.focus();
+            elements.nameInput.value = '';
+            elements.memoInput.value = '';
+            elements.addressInput.value = '';
+            elements.linkInput.value = '';
+            elements.nameInput.focus();
 
-            showToast('할 일이 성공적으로 등록되었습니다.', 'success');
-            await fetchTodos();
+            showToast('맛집이 성공적으로 등록되었습니다.', 'success');
+            await fetchRestaurants();
             await fetchStats();
         } catch (err) {
             showToast(err.message, 'error');
         }
     }
 
-    async function toggleTodoStatus(todoId) {
+    async function toggleVisited(id) {
         try {
-            const res = await fetch(`/api/todos/${todoId}/toggle`, {
+            const res = await fetch(`/api/restaurants/${id}/toggle`, {
                 method: 'PATCH'
             });
             if (!res.ok) throw new Error('상태 변경 실패');
-            
+
             const data = await res.json();
-            const isDone = data.todo.completed === 1;
-            showToast(isDone ? '완료 처리되었습니다! 🎉' : '진행 중으로 변경되었습니다.', 'info');
-            
-            await fetchTodos();
+            const isVisited = data.restaurant.visited === 1;
+            showToast(isVisited ? '방문 완료로 표시했어요! 🍽️' : '방문 예정으로 변경했어요.', 'info');
+
+            await fetchRestaurants();
             await fetchStats();
         } catch (err) {
             showToast('상태 변경 중 오류가 발생했습니다.', 'error');
         }
     }
 
-    async function deleteTodo(todoId) {
-        if (!confirm('정말 이 할일을 삭제하시겠습니까?')) return;
+    async function deleteRestaurant(id) {
+        if (!confirm('정말 이 맛집을 삭제하시겠습니까?')) return;
 
         try {
-            const res = await fetch(`/api/todos/${todoId}`, {
+            const res = await fetch(`/api/restaurants/${id}`, {
                 method: 'DELETE'
             });
             if (!res.ok) throw new Error('삭제 실패');
 
-            showToast('할 일이 삭제되었습니다.', 'info');
-            await fetchTodos();
+            showToast('맛집이 삭제되었습니다.', 'info');
+            await fetchRestaurants();
             await fetchStats();
         } catch (err) {
             showToast('삭제 중 문제가 발생했습니다.', 'error');
         }
     }
 
-    async function handleUpdateTodo(e) {
+    async function handleUpdateRestaurant(e) {
         e.preventDefault();
-        const todoId = elements.editTodoId.value;
-        const title = elements.editTitleInput.value.trim();
+        const id = elements.editId.value;
+        const name = elements.editNameInput.value.trim();
 
-        if (!title) {
-            showToast('제목을 입력해주세요.', 'error');
+        if (!name) {
+            showToast('가게 이름을 입력해주세요.', 'error');
             return;
         }
 
         const payload = {
-            title: title,
+            name: name,
             category: elements.editCategorySelect.value,
-            priority: elements.editPrioritySelect.value,
-            due_date: elements.editDueDateInput.value,
-            description: elements.editDescriptionInput.value.trim()
+            price_range: elements.editPriceSelect.value,
+            address: elements.editAddressInput.value.trim(),
+            link: elements.editLinkInput.value.trim(),
+            rating: parseInt(elements.editRatingSelect.value, 10),
+            memo: elements.editMemoInput.value.trim()
         };
 
         try {
-            const res = await fetch(`/api/todos/${todoId}`, {
+            const res = await fetch(`/api/restaurants/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -316,8 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             closeEditModal();
-            showToast('할일이 수정되었습니다.', 'success');
-            await fetchTodos();
+            showToast('맛집 정보가 수정되었습니다.', 'success');
+            await fetchRestaurants();
             await fetchStats();
         } catch (err) {
             showToast(err.message, 'error');
@@ -328,52 +334,63 @@ document.addEventListener('DOMContentLoaded', () => {
        Rendering & UI
        ========================================================================== */
 
-    function renderTodoList(todos) {
+    function renderRestaurantList(restaurants) {
         elements.todoList.innerHTML = '';
 
-        if (!todos || todos.length === 0) {
+        if (!restaurants || restaurants.length === 0) {
             elements.emptyState.style.display = 'block';
             return;
         }
 
         elements.emptyState.style.display = 'none';
 
-        todos.forEach(todo => {
+        restaurants.forEach(item => {
             const card = document.createElement('div');
-            card.className = `todo-card ${todo.completed ? 'completed' : ''}`;
-            card.id = `todoCard-${todo.id}`;
+            card.className = `todo-card ${item.visited ? 'completed' : ''}`;
+            card.id = `todoCard-${item.id}`;
 
-            // Due Date Badge HTML
-            let dueDateBadge = '';
-            if (todo.due_date) {
-                const { text, statusClass } = formatDueDate(todo.due_date);
-                dueDateBadge = `
-                    <span class="badge-due-date ${statusClass}">
-                        <i class="fa-regular fa-clock"></i> ${text}
+            let addressBadge = '';
+            if (item.address) {
+                addressBadge = `
+                    <span class="badge-due-date">
+                        <i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.address)}
                     </span>
                 `;
             }
 
+            let linkButton = '';
+            if (item.link && /^https?:\/\//i.test(item.link)) {
+                // Only render http(s) links as clickable — anything else (e.g. javascript:)
+                // is skipped so it can never execute in the page.
+                linkButton = `
+                    <a class="action-icon-btn link-btn" title="참고 링크 열기" href="${escapeAttr(item.link)}" target="_blank" rel="noopener noreferrer">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                `;
+            }
+
             card.innerHTML = `
-                <button type="button" class="todo-checkbox-btn" aria-label="완료 여부 변경" data-id="${todo.id}">
+                <button type="button" class="todo-checkbox-btn" aria-label="방문 여부 변경" data-id="${item.id}" title="방문 완료로 표시">
                     <i class="fa-solid fa-check"></i>
                 </button>
                 <div class="todo-content">
                     <div class="todo-header-row">
-                        <span class="todo-title">${escapeHtml(todo.title)}</span>
+                        <span class="todo-title">${escapeHtml(item.name)}</span>
                         <div class="todo-badges">
-                            <span class="badge badge-priority-${todo.priority}">${todo.priority}</span>
-                            <span class="badge badge-category-${todo.category}">${todo.category}</span>
-                            ${dueDateBadge}
+                            <span class="badge badge-category-${item.category}">${item.category}</span>
+                            <span class="badge badge-price-${item.price_range}">${item.price_range}</span>
+                            ${renderStars(item.rating, item.visited)}
+                            ${addressBadge}
                         </div>
                     </div>
-                    ${todo.description ? `<p class="todo-description">${escapeHtml(todo.description)}</p>` : ''}
+                    ${item.memo ? `<p class="todo-description">${escapeHtml(item.memo)}</p>` : ''}
                 </div>
                 <div class="todo-actions">
-                    <button type="button" class="action-icon-btn edit-btn" title="수정" data-id="${todo.id}">
+                    ${linkButton}
+                    <button type="button" class="action-icon-btn edit-btn" title="수정" data-id="${item.id}">
                         <i class="fa-regular fa-pen-to-square"></i>
                     </button>
-                    <button type="button" class="action-icon-btn delete-btn" title="삭제" data-id="${todo.id}">
+                    <button type="button" class="action-icon-btn delete-btn" title="삭제" data-id="${item.id}">
                         <i class="fa-regular fa-trash-can"></i>
                     </button>
                 </div>
@@ -381,56 +398,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Event Bindings
             const checkBtn = card.querySelector('.todo-checkbox-btn');
-            checkBtn.addEventListener('click', () => toggleTodoStatus(todo.id));
+            checkBtn.addEventListener('click', () => toggleVisited(item.id));
 
             const editBtn = card.querySelector('.edit-btn');
-            editBtn.addEventListener('click', () => openEditModal(todo));
+            editBtn.addEventListener('click', () => openEditModal(item));
 
             const deleteBtn = card.querySelector('.delete-btn');
-            deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
+            deleteBtn.addEventListener('click', () => deleteRestaurant(item.id));
 
             elements.todoList.appendChild(card);
         });
     }
 
-    function openEditModal(todo) {
-        elements.editTodoId.value = todo.id;
-        elements.editTitleInput.value = todo.title;
-        elements.editCategorySelect.value = todo.category || '일반';
-        elements.editPrioritySelect.value = todo.priority || '보통';
-        elements.editDueDateInput.value = todo.due_date || '';
-        elements.editDescriptionInput.value = todo.description || '';
+    function renderStars(rating, visited) {
+        if (!visited) return '';
+        if (!rating || rating === 0) {
+            return `<span class="rating-stars rating-empty">평점 없음</span>`;
+        }
+        let starsHtml = '<span class="rating-stars">';
+        for (let i = 1; i <= 5; i++) {
+            const filled = i <= rating;
+            starsHtml += `<i class="fa-${filled ? 'solid' : 'regular'} fa-star${filled ? ' filled' : ''}"></i>`;
+        }
+        starsHtml += '</span>';
+        return starsHtml;
+    }
+
+    function openEditModal(item) {
+        elements.editId.value = item.id;
+        elements.editNameInput.value = item.name;
+        elements.editCategorySelect.value = item.category || '기타';
+        elements.editPriceSelect.value = item.price_range || '보통';
+        elements.editAddressInput.value = item.address || '';
+        elements.editLinkInput.value = item.link || '';
+        elements.editRatingSelect.value = String(item.rating || 0);
+        elements.editMemoInput.value = item.memo || '';
 
         elements.editModal.style.display = 'flex';
-        elements.editTitleInput.focus();
+        elements.editNameInput.focus();
     }
 
     function closeEditModal() {
         elements.editModal.style.display = 'none';
-        elements.editTodoForm.reset();
-    }
-
-    function formatDueDate(dueDateStr) {
-        if (!dueDateStr) return { text: '', statusClass: '' };
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const target = new Date(dueDateStr);
-        target.setHours(0, 0, 0, 0);
-
-        const diffTime = target - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) {
-            return { text: `기한초과 (${Math.abs(diffDays)}일 지남)`, statusClass: 'overdue' };
-        } else if (diffDays === 0) {
-            return { text: '오늘 마감', statusClass: 'today' };
-        } else if (diffDays === 1) {
-            return { text: '내일 마감 (D-1)', statusClass: 'today' };
-        } else {
-            return { text: `D-${diffDays} (${dueDateStr.slice(5)})`, statusClass: '' };
-        }
+        elements.editRestaurantForm.reset();
     }
 
     function showLoading(isLoading) {
@@ -443,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(message, type = 'info') {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        
+
         let iconHtml = '<i class="fa-solid fa-circle-info"></i>';
         if (type === 'success') iconHtml = '<i class="fa-solid fa-circle-check"></i>';
         else if (type === 'error') iconHtml = '<i class="fa-solid fa-triangle-exclamation"></i>';
@@ -461,5 +471,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+        if (!str) return '';
+        return str.replace(/"/g, '&quot;');
     }
 });
